@@ -19,11 +19,16 @@ package org.eclipse.microprofile.openapi.tck;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertNotSame;
 import static org.testng.Assert.assertNull;
-import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+// assertSame and assertNotSame are broken in TestNG 7.4.0 - https://github.com/cbeust/testng/issues/2486
+// import static org.testng.Assert.assertNotSame;
+// import static org.testng.Assert.assertSame;
+import static org.testng.internal.EclipseInterface.ASSERT_EQUAL_LEFT;
+import static org.testng.internal.EclipseInterface.ASSERT_LEFT2;
+import static org.testng.internal.EclipseInterface.ASSERT_MIDDLE;
+import static org.testng.internal.EclipseInterface.ASSERT_RIGHT;
 
 import java.beans.Introspector;
 import java.lang.reflect.InvocationTargetException;
@@ -87,6 +92,63 @@ import org.testng.annotations.Test;
  * to verify that they behave correctly.
  */
 public class ModelConstructionTest extends Arquillian {
+
+    // assertSame and assertNotSame are broken in TestNG 7.4.0 - https://github.com/cbeust/testng/issues/2486
+    // This section copied from
+    // https://github.com/cbeust/testng/blob/master/testng-asserts/src/main/java/org/testng/Assert.java
+    // Should be removed when TestNG 7.5.0 is released
+    // --------------------------------
+    /**
+     * Asserts that two objects refer to the same object. If they do not, an AssertionFailedError, with the given
+     * message, is thrown.
+     *
+     * @param actual
+     *            the actual value
+     * @param expected
+     *            the expected value
+     * @param message
+     *            the assertion error message
+     */
+    public static void assertSame(Object actual, Object expected, String message) {
+        if (expected == actual) {
+            return;
+        }
+        failNotSame(actual, expected, message);
+    }
+
+    /**
+     * Asserts that two objects do not refer to the same objects. If they do, an AssertionError, with the given message,
+     * is thrown.
+     *
+     * @param actual
+     *            the actual value
+     * @param expected
+     *            the expected value
+     * @param message
+     *            the assertion error message
+     */
+    public static void assertNotSame(Object actual, Object expected, String message) {
+        if (expected == actual) {
+            failSame(actual, expected, message);
+        }
+    }
+
+    private static void failSame(Object actual, Object expected, String message) {
+        String formatted = "";
+        if (message != null) {
+            formatted = message + " ";
+        }
+        fail(formatted + ASSERT_LEFT2 + expected + ASSERT_MIDDLE + actual + ASSERT_RIGHT);
+    }
+
+    private static void failNotSame(Object actual, Object expected, String message) {
+        String formatted = "";
+        if (message != null) {
+            formatted = message + " ";
+        }
+        fail(formatted + ASSERT_EQUAL_LEFT + expected + ASSERT_MIDDLE + actual + ASSERT_RIGHT);
+    }
+    // --------------------------------
 
     @Deployment
     public static WebArchive createDeployment() {
@@ -1669,7 +1731,8 @@ public class ModelConstructionTest extends Arquillian {
 
     private <T> void checkListEntryAbsent(List<T> list, T value) {
         assertNotNull(list, "The list must not be null.");
-        assertTrue(list.stream().noneMatch((v) -> v == value), "The list is expected not to contain the value: " + value);
+        assertTrue(list.stream().noneMatch((v) -> v == value),
+                "The list is expected not to contain the value: " + value);
     }
 
     private <O, V> void checkListImmutable(O container, Function<O, List<V>> listGetter, V otherValue) {
